@@ -131,7 +131,7 @@ $(function() {
 		pacman.position.set(700, 1850);
 		pacman.vx = 0;
 		pacman.vy = 0;
-		//pacman.anchor.set(0.5, 0.5);
+		pacman.anchor.set(0.5, 0.5);
 
 		app.stage.addChild(pacman);
 		app.ticker.add(delta => gameLoop(delta));
