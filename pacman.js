@@ -5,10 +5,14 @@ $(function() {
 	// Sprites
 	var board,
 		pacman,
-		pacdots = [];
+		gameover,
+		pacdots = [],
+		ghosts = [];
 
 	// Sounds
-	var eatpill;
+	var eating,
+		die,
+		siren;
 
 	// Game state
 	var score = 0,
@@ -90,20 +94,26 @@ $(function() {
 			"pinkghost.png",
 			"redghost.png",
 			"board.png",
+			"gameover.png",
 			"pacman.png",
 			"realmap.png",
+			"ready.png",
 			"yellowghost.png"
 		];
 
 		sounds.load([
 			"assets/eat-pill.mp3",
 			"assets/eat-fruit.mp3",
+			"assets/eating.mp3",
 			"assets/ready.mp3",
+			"assets/siren.mp3",
 			"assets/die.mp3"
 		]);
 		sounds.whenLoaded = function() {};
 
-		eatpill = sounds["assets/eat-pill.mp3"];
+		eating = sounds["assets/eating.mp3"];
+		siren = sounds["assets/siren.mp3"];
+		die = sounds["assets/die.mp3"];
 
 		loader.add(assets.map(a => directory + "/" + a))
 			  .on("progress", loadProgress)
@@ -146,6 +156,13 @@ $(function() {
 	}
 
 	function setup() {
+		var ghostData = [
+			{ name: "blue", x: 234, y: 580 },
+			{ name: "pink", x: 700, y: 580 },
+			{ name: "yellow", x: 480, y: 1240 },
+			{ name: "red", x: 20, y: 1564 }
+		];
+
 		board = new Sprite(resources["assets/board.png"].texture);
 		app.stage.addChild(board);
 		app.stage.addChild(scoreText);
@@ -167,8 +184,20 @@ $(function() {
 		pacman.vx = 0;
 		pacman.vy = 0;
 		pacman.anchor.set(0.5, 0.5);
-
 		app.stage.addChild(pacman);
+
+		ghostData.forEach(function(g) {
+			var ghost = new Sprite(resources["assets/" + g.name + "ghost.png"].texture);
+			ghost.position.set(g.x, g.y);
+			app.stage.addChild(ghost);
+			ghosts.push(ghost);
+		});
+
+		gameover = new Sprite(resources["assets/gameover.png"].texture);
+		gameover.position.set(350, 900);
+		gameover.visible = false;
+		app.stage.addChild(gameover);
+
 		app.ticker.add(delta => gameLoop(delta));
 
 		startTime = new Date();
@@ -183,7 +212,16 @@ $(function() {
 				dot.visible = false;
 				score += 100;
 				scoreText.text = score;
-				eatpill.play();
+				eating.play();
+			}
+		});
+
+		ghosts.forEach(function(ghost) {
+			if (die.playing === false && hitTestRectangle(ghost, pacman)) {
+				die.play();
+				ghost.visible = false;
+				gameover.visible = true;
+				pacman.visible = false;
 			}
 		});
 
@@ -279,7 +317,6 @@ $(function() {
 
 	function scaleScene(renderer, sceneContainer) {
 		var r = calculateAspectRatioFit(gameWidth, gameHeight, window.innerWidth, window.innerHeight);
-		console.log(r);
 		sceneContainer.scale.x = r.width / gameWidth;
 		sceneContainer.scale.y = r.height / gameHeight;
 		renderer.resize(r.width, r.height);
