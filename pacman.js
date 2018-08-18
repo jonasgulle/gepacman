@@ -1,6 +1,6 @@
 $(function() {
-	const width = 1080;
-	const height = 1920;
+	const gameWidth = 1080;
+	const gameHeight = 1920;
 	var board,
 		pacman,
 		pacdots = [];
@@ -58,16 +58,20 @@ $(function() {
 		}
 	}
 
-	let app = new Application({width: width, height: height});
+	let app = new Application({width: gameWidth, height: gameHeight});
 	app.renderer.autoResize = true;
 	document.body.appendChild(app.view);
 
 	window.addEventListener('resize', resize);
 
+	setTimeout(function() {
+		resize();
+	}, 2000);
+
 	function resize() {
-		// Resize the renderer
-		//app.renderer.resize(window.innerWidth, window.innerHeight);
+		scaleScene(app.renderer, app.stage);
 	}
+	resize();
 
 	function loadAssets() {
 		let directory = "assets";
@@ -93,8 +97,12 @@ $(function() {
 		return v0 * (1 - t) + v1 * t;
 	}
 
-	function drawPacDotsLineX(sx, dx, y, num) {
+	function drawPacDotsLineX(sx, dx, y, num, skipList) {
 		for (var i = 0; i < num; i++) {
+			if (skipList !== undefined && skipList.length > 0 && i === skipList[0]) {
+				skipList.shift();
+				continue;
+			}
 			dot = new Sprite(resources["assets/pacdot.png"].texture);
 			dot.position.set(lerp(sx, dx, i / num), y);
 			app.stage.addChild(dot);
@@ -102,8 +110,13 @@ $(function() {
 		}
 	}
 
-	function drawPacDotsLineY(sy, dy, x, num) {
+	// Draw pac dots on a line, skip pac dots indices in skipList.
+	function drawPacDotsLineY(sy, dy, x, num, skipList) {
 		for (var i = 0; i < num; i++) {
+			if (skipList !== undefined && skipList.length > 0 && i === skipList[0]) {
+				skipList.shift();
+				continue;
+			}
 			dot = new Sprite(resources["assets/pacdot.png"].texture);
 			dot.position.set(x, lerp(sy, dy, i / num));
 			app.stage.addChild(dot);
@@ -121,14 +134,14 @@ $(function() {
 
 		drawPacDotsLineX(60, 1060, 1600, 25);
 		drawPacDotsLineX(60, 1060, 1273, 25);
-		drawPacDotsLineX(60, 1060, 857, 25);
+		drawPacDotsLineX(60, 1060, 857, 25, [5, 11, 18]);
 
 		drawPacDotsLineY(591, 1920, 265, 35);
 		drawPacDotsLineY(591, 1920, 510, 35);
-		drawPacDotsLineY(591, 1920, 728, 35);
+		drawPacDotsLineY(591, 1920, 728, 35, [7]);
 
 		pacman = new Sprite(resources["assets/pacman.png"].texture);
-		pacman.position.set(700, 1850);
+		pacman.position.set(733, 1880);
 		pacman.vx = 0;
 		pacman.vy = 0;
 		pacman.anchor.set(0.5, 0.5);
@@ -140,6 +153,7 @@ $(function() {
 	function gameLoop(delta) {
 		pacman.x += pacman.vx;
 		pacman.y += pacman.vy;
+		pacman.rotation += 0.1;
 		pacdots.forEach(function(dot) {
 			if (hitTestRectangle(dot, pacman)) {
 				dot.visible = false;
@@ -193,10 +207,10 @@ $(function() {
 		hit = false;
 
 		// Find the center points of each sprite
-		r1.centerX = r1.x + r1.width / 2;
-		r1.centerY = r1.y + r1.height / 2;
-		r2.centerX = r2.x + r2.width / 2;
-		r2.centerY = r2.y + r2.height / 2;
+		r1.centerX = r1.x + r1.width / 2 - r1.anchor.x * r1.width;
+		r1.centerY = r1.y + r1.height / 2 - r1.anchor.y * r1.height;
+		r2.centerX = r2.x + r2.width / 2 - r2.anchor.x * r2.width;
+		r2.centerY = r2.y + r2.height / 2 - r2.anchor.y * r2.height;
 
 		// Find the half-widths and half-heights of each sprite
 		r1.halfWidth = r1.width / 2;
@@ -231,6 +245,19 @@ $(function() {
 		//`hit` will be either `true` or `false`
 		return hit;
 	};
+
+	function scaleScene(renderer, sceneContainer) {
+		var r = calculateAspectRatioFit(gameWidth, gameHeight, window.innerWidth, window.innerHeight);
+		console.log(r);
+		sceneContainer.scale.x = r.width / gameWidth;
+		sceneContainer.scale.y = r.height / gameHeight;
+		renderer.resize(r.width, r.height);
+	}
+
+	function calculateAspectRatioFit(srcWidth, srcHeight, maxWidth, maxHeight) {
+		var ratio = Math.min(maxWidth / srcWidth, maxHeight / srcHeight);
+		return { width: srcWidth * ratio, height: srcHeight * ratio };
+	}
 
 	loadAssets();
 
