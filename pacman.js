@@ -1,12 +1,25 @@
 $(function() {
 	const gameWidth = 1080;
 	const gameHeight = 1920;
+
+	// Sprites
 	var board,
 		pacman,
 		pacdots = [];
 
+	// Sounds
+	var eatpill;
+
+	// Game state
+	var score = 0,
+		scoreText = new PIXI.Text("0", { fontFamily: "Courier", fontSize: 80, fill: "white", fontWeight: "bold" }),
+		timeText = new PIXI.Text("00:00", { fontFamily: "Courier", fontSize: 80, fill: "white", fontWeight: "bold" }),
+		startTime,
+		timeElapsed;
+
 	let Application = PIXI.Application,
 		resources = PIXI.loader.resources,
+		loader = PIXI.loader,
 		Sprite = PIXI.Sprite;
 
 	let keyRight = keyboard(39),
@@ -63,11 +76,6 @@ $(function() {
 	document.body.appendChild(app.view);
 
 	window.addEventListener('resize', resize);
-
-	setTimeout(function() {
-		resize();
-	}, 2000);
-
 	function resize() {
 		scaleScene(app.renderer, app.stage);
 	}
@@ -87,10 +95,19 @@ $(function() {
 			"yellowghost.png"
 		];
 
-		PIXI.loader
-			.add(assets.map(a => directory + "/" + a))
-			.on("progress", loadProgress)
-			.load(setup);
+		sounds.load([
+			"assets/eat-pill.mp3",
+			"assets/eat-fruit.mp3",
+			"assets/ready.mp3",
+			"assets/die.mp3"
+		]);
+		sounds.whenLoaded = function() {};
+
+		eatpill = sounds["assets/eat-pill.mp3"];
+
+		loader.add(assets.map(a => directory + "/" + a))
+			  .on("progress", loadProgress)
+			  .load(setup);
 	}
 
 	function lerp(v0, v1, t) {
@@ -131,13 +148,18 @@ $(function() {
 	function setup() {
 		board = new Sprite(resources["assets/board.png"].texture);
 		app.stage.addChild(board);
+		app.stage.addChild(scoreText);
+		app.stage.addChild(timeText);
 
-		drawPacDotsLineX(60, 1060, 1600, 25);
-		drawPacDotsLineX(60, 1060, 1273, 25);
-		drawPacDotsLineX(60, 1060, 857, 25, [5, 11, 18]);
+		scoreText.position.set(650, 390);
+		timeText.position.set(184, 390);
+
+		drawPacDotsLineX(60, 1060, 1600, 25, [5, 11, 17]);
+		drawPacDotsLineX(60, 1060, 1273, 25, [5, 17]);
+		drawPacDotsLineX(60, 1060, 857, 25, [5, 11]);
 
 		drawPacDotsLineY(591, 1920, 265, 35);
-		drawPacDotsLineY(591, 1920, 510, 35);
+		drawPacDotsLineY(591, 1920, 510, 35, [18]);
 		drawPacDotsLineY(591, 1920, 728, 35, [7]);
 
 		pacman = new Sprite(resources["assets/pacman.png"].texture);
@@ -148,6 +170,8 @@ $(function() {
 
 		app.stage.addChild(pacman);
 		app.ticker.add(delta => gameLoop(delta));
+
+		startTime = new Date();
 	}
 
 	function gameLoop(delta) {
@@ -155,10 +179,17 @@ $(function() {
 		pacman.y += pacman.vy;
 		pacman.rotation += 0.1;
 		pacdots.forEach(function(dot) {
-			if (hitTestRectangle(dot, pacman)) {
+			if (dot.visible && hitTestRectangle(dot, pacman)) {
 				dot.visible = false;
+				score += 100;
+				scoreText.text = score;
+				eatpill.play();
 			}
 		});
+
+		timeElapsed = (Date.parse(new Date()) - Date.parse(startTime)) / 1000;
+		timeText.text = ('0' + Math.floor(timeElapsed / 60)).slice(-2) + ":"
+					  + ('0' + (timeElapsed % 60)).slice(-2);
 	}
 
 	function keyboard(keyCode) {
