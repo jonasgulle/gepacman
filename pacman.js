@@ -156,11 +156,12 @@ $(function() {
 	}
 
 	function setup() {
+		let ghostSpeed = 2;
 		var ghostData = [
-			{ name: "blue", x: 234, y: 580 },
-			{ name: "pink", x: 700, y: 580 },
-			{ name: "yellow", x: 480, y: 1240 },
-			{ name: "red", x: 20, y: 1564 }
+			{ name: "blue", x: 234, y: 580, vy: ghostSpeed, vx: 0 },
+			{ name: "pink", x: 700, y: 880, vy: ghostSpeed, vx: 0 },
+			{ name: "yellow", x: 480, y: 1240, vy: 0, vx: -ghostSpeed },
+			{ name: "red", x: 20, y: 1564, vy: 0, vx: ghostSpeed }
 		];
 
 		board = new Sprite(resources["assets/board.png"].texture);
@@ -190,6 +191,7 @@ $(function() {
 			var ghost = new Sprite(resources["assets/" + g.name + "ghost.png"].texture);
 			ghost.position.set(g.x, g.y);
 			app.stage.addChild(ghost);
+			ghost.data = g;
 			ghosts.push(ghost);
 		});
 
@@ -214,6 +216,16 @@ $(function() {
 				scoreText.text = score;
 				eating.play();
 			}
+		});
+
+		// Update ghost position and bounds checking
+		ghosts.forEach(function(ghost) {
+			ghost.x += ghost.data.vx;
+			ghost.y += ghost.data.vy;
+			if (ghost.x < 20 || ghost.x > gameWidth - (ghost.width + 20))
+				ghost.data.vx = -ghost.data.vx;
+			if (ghost.y < 560 || ghost.y > gameHeight - (ghost.height + 20))
+				ghost.data.vy = -ghost.data.vy;
 		});
 
 		ghosts.forEach(function(ghost) {
