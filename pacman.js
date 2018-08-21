@@ -1,13 +1,100 @@
-$(function() {
-	const gameWidth = 1080;
-	const gameHeight = 1920;
+const gameWidth = 1080;
+const gameHeight = 1920;
 
+// Spelplanen är 250 meter bred och 350 meter hög
+
+// Distance in meters
+function calculateDistance(lat1, lon1, lat2, lon2) {
+	var R = 6371000; // m
+	var dLat = (lat2 - lat1).toRad();
+	var dLon = (lon2 - lon1).toRad();
+	var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+			Math.cos(lat1.toRad()) * Math.cos(lat2.toRad()) *
+			Math.sin(dLon / 2) * Math.sin(dLon / 2);
+	var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+	var d = R * c;
+	return d;
+}
+
+Number.prototype.toRad = function() {
+	return this * Math.PI / 180;
+}
+
+function lerp(v0, v1, t) {
+	return v0 * (1 - t) + v1 * t;
+}
+
+// Calculate snapGrid:
+function calculateSnapGrid() {
+	/*
+		Det kommer att bli en naiv approach genom att jag kommer att interpolera
+		alla gators lat/lng i tusen punkter, fem verticala linjer och fem horisontella
+		linjer med hundra punkter vardera. Pacman kommer sedan att "snappa" till den
+		närmaste punkten. Detta kommer göra att man inte kan gömma sig i parker etc.
+
+		Miniature map
+
+		  G  I  K
+		xx|xx|xx|xxx
+		xx|xx|xx|xxx
+	   A--+--+--+---B
+		xx|xx|xx|xxx
+		xx|xx|pp|xxx
+		xx|xx|pp|xxx
+	   C--+--+--+---D
+		xx|xx|xx|xxx
+		xx|xx|xx|xxx
+	   E--+--+--+---F
+		xx|pp|xx|ttt
+		xx|pp|xx|ttt
+		  H  J  L
+	*/	
+	var a = { x: 37,   y: 861,  lat: 62.389415, lon: 17.301815 },
+		b = { x: 1053, y: 861,  lat: 62.391632, lon: 17.302909 },
+		c = { x: 37,   y: 1279, lat: 62.389211, lon: 17.303724 },
+		d = { x: 1053, y: 1279, lat: 62.391394, lon: 17.304851 },
+		e = { x: 37,   y: 1605, lat: 62.389052, lon: 17.305226 },
+		f = { x: 1053, y: 1605, lat: 62.39123,  lon: 17.306374 },
+
+		g = { x: 269,  y: 593,  lat: 62.390056, lon: 17.30087 },
+		h = { x: 269,  y: 1891, lat: 62.38945,  lon: 17.306793 },
+		i = { x: 514,  y: 593,  lat: 62.390573, lon: 17.301106 },
+		j = { x: 514,  y: 1891, lat: 62.389917, lon: 17.307104 },
+		k = { x: 731,  y: 593,  lat: 62.391085, lon: 17.301332 },
+		l = { x: 731,  y: 1891, lat: 62.390374, lon: 17.307372 };
+
+	const POINTS = 100;
+
+	// Interpolate everyting between these points
+	var snapPoints = [[a, b], [c, d], [e, f], [g, h], [i, j], [k, l]],
+		snapGridResult = [];
+
+	for (var p = 0; p < snapPoints.length; p++) {
+		var p1 = snapPoints[p][0],
+			p2 = snapPoints[p][1];
+
+		for (var i = 0; i <= POINTS; i++) {
+			var gridPoint = {
+				lat: lerp(p1.lat, p2.lat, i / POINTS),
+				lon: lerp(p1.lon, p2.lon, i / POINTS),
+				  x: Math.round(lerp(p1.x, p2.x, i / POINTS)),
+				  y: Math.round(lerp(p1.y, p2.y, i / POINTS))
+			};
+			snapGridResult.push(gridPoint);
+		}
+	}
+
+	return snapGridResult;
+}
+
+$(function() {
 	// Sprites
 	var board,
 		pacman,
 		gameover,
 		pacdots = [],
-		ghosts = [];
+		ghosts = [],
+		pacmanSpeed = 2;
 
 	// Sounds
 	var eating,
@@ -24,15 +111,30 @@ $(function() {
 	let Application = PIXI.Application,
 		resources = PIXI.loader.resources,
 		loader = PIXI.loader,
-		Sprite = PIXI.Sprite;
+		Sprite = PIXI.Sprite,
+		snapGrid = calculateSnapGrid();
 
-	let keyRight = keyboard(39),
+	if (navigator.geolocation) {
+		navigator.geolocation.watchPosition(
+			newPosition,
+			errorPosition,
+			{
+				enableHighAccuracy: true,
+				timeout: 10000,
+				maximumAge: 0
+			}
+		);
+	} else {
+		alert("Sorry! Cannot access the GPS on your device");
+	}
+
+	/*let keyRight = keyboard(39),
 		keyLeft = keyboard(37),
 		keyUp = keyboard(38),
 		keyDown = keyboard(40);
 
 	keyRight.press = () => {
-		pacman.vx = 2;
+		pacman.vx = pacmanSpeed;
 		pacman.vy = 0;
 	};
 
@@ -43,7 +145,7 @@ $(function() {
 	}
 
 	keyLeft.press = () => {
-		pacman.vx = -2;
+		pacman.vx = -pacmanSpeed;
 		pacman.vy = 0;
 	};
 
@@ -55,7 +157,7 @@ $(function() {
 
 	keyUp.press = () => {
 		pacman.vx = 0;
-		pacman.vy = -2;
+		pacman.vy = -pacmanSpeed;
 	};
 
 	keyUp.release = () => {
@@ -66,14 +168,14 @@ $(function() {
 
 	keyDown.press = () => {
 		pacman.vx = 0;
-		pacman.vy = 2;
+		pacman.vy = pacmanSpeed;
 	};
 
 	keyDown.release = () => {
 		if (!keyUp.isDown && pacman.vx === 0) {
 			pacman.vy = 0;
 		}
-	}
+	}*/
 
 	let app = new Application({width: gameWidth, height: gameHeight});
 	app.renderer.autoResize = true;
@@ -83,7 +185,15 @@ $(function() {
 	function resize() {
 		scaleScene(app.renderer, app.stage);
 	}
+
 	resize();
+	/*setInterval(function() {
+		resize();
+	}, 2000);*/
+
+	/*setTimeout(function() {
+		newPosition({ coords: { latitude: 62.390703, longitude: 17.304507, heading: 270 } });
+	}, 3000);*/
 
 	function loadAssets() {
 		let directory = "assets";
@@ -156,7 +266,7 @@ $(function() {
 	}
 
 	function setup() {
-		let ghostSpeed = 2;
+		let ghostSpeed = 1;
 		var ghostData = [
 			{ name: "blue", x: 234, y: 580, vy: ghostSpeed, vx: 0 },
 			{ name: "pink", x: 700, y: 880, vy: ghostSpeed, vx: 0 },
@@ -181,7 +291,7 @@ $(function() {
 		drawPacDotsLineY(591, 1920, 728, 35, [7]);
 
 		pacman = new Sprite(resources["assets/pacman.png"].texture);
-		pacman.position.set(733, 1880);
+		pacman.position.set(894, 1432);
 		pacman.vx = 0;
 		pacman.vy = 0;
 		pacman.anchor.set(0.5, 0.5);
@@ -202,13 +312,14 @@ $(function() {
 
 		app.ticker.add(delta => gameLoop(delta));
 
+		setInterval(function() { resize(); }, 2000);
+
 		startTime = new Date();
 	}
 
 	function gameLoop(delta) {
-		pacman.x += pacman.vx;
-		pacman.y += pacman.vy;
-		pacman.rotation += 0.1;
+		//pacman.x += pacman.vx;
+		//pacman.y += pacman.vy;
 		pacdots.forEach(function(dot) {
 			if (dot.visible && hitTestRectangle(dot, pacman)) {
 				dot.visible = false;
@@ -232,8 +343,8 @@ $(function() {
 			if (die.playing === false && hitTestRectangle(ghost, pacman)) {
 				die.play();
 				ghost.visible = false;
-				gameover.visible = true;
-				pacman.visible = false;
+				//gameover.visible = true;
+				//pacman.visible = false;
 			}
 		});
 
@@ -242,7 +353,7 @@ $(function() {
 					  + ('0' + (timeElapsed % 60)).slice(-2);
 	}
 
-	function keyboard(keyCode) {
+	/*function keyboard(keyCode) {
 		let key = {};
 		key.code = keyCode;
 		key.isDown = false;
@@ -278,7 +389,7 @@ $(function() {
 		);
 
 		return key;
-	}
+	}*/
 
 	function hitTestRectangle(r1, r2) {
 		// Define the variables we'll need to calculate
@@ -337,6 +448,29 @@ $(function() {
 	function calculateAspectRatioFit(srcWidth, srcHeight, maxWidth, maxHeight) {
 		var ratio = Math.min(maxWidth / srcWidth, maxHeight / srcHeight);
 		return { width: srcWidth * ratio, height: srcHeight * ratio };
+	}
+
+	function newPosition(position) {
+		var closestDistance = 10000,
+			closestPoint;
+
+		console.log(position.coords);
+
+		for (var i = 0; i < snapGrid.length; i++) {
+			var gp = snapGrid[i];
+			var distance = calculateDistance(gp.lat, gp.lon, position.coords.latitude, position.coords.longitude);
+			if (distance < closestDistance) {
+				closestPoint = gp;
+				closestDistance = distance;
+			}
+		}
+
+		pacman.position.set(closestPoint.x, closestPoint.y);
+		pacman.rotation = (position.coords.heading / 360.0);
+	}
+
+	function errorPosition(error) {
+		alert("Error getting GPS position");
 	}
 
 	loadAssets();
