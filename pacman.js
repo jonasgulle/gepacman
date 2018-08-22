@@ -311,6 +311,17 @@ function startGame() {
 			app.ticker.stop();
 			geocache.visible = true;
 			winner.visible = true;
+
+			$.post(
+				"saveresult.php",
+				{
+					username: $("#username").val(),
+					timespent: timeElapsed,
+					score: score
+				}, function(response) {
+					console.log(response);
+				}
+			);
 		}
 
 		// Update ghost position and bounds checking
