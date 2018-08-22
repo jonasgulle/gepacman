@@ -1,7 +1,9 @@
 const gameWidth = 1080;
 const gameHeight = 1920;
+var gameStarted = false,
+	noSleep = new NoSleep();
 
-// Spelplanen är 250 meter bred och 350 meter hög
+// The game board is 250x350 meters IRL.
 
 // Distance in meters
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -24,49 +26,54 @@ function lerp(v0, v1, t) {
 	return v0 * (1 - t) + v1 * t;
 }
 
-// Calculate snapGrid:
 function calculateSnapGrid() {
 	/*
-		Det kommer att bli en naiv approach genom att jag kommer att interpolera
-		alla gators lat/lng i tusen punkter, fem verticala linjer och fem horisontella
-		linjer med hundra punkter vardera. Pacman kommer sedan att "snappa" till den
-		närmaste punkten. Detta kommer göra att man inte kan gömma sig i parker etc.
+		This is my naive approach for the GPS navigation.
+		I'm interpolating lines (x, y, lat, lng) for all streets in the map.
+		Pac-Man will then "snap" to the closest point from the actual position.
 
 		Miniature map
 
-		  G  I  K
-		xx|xx|xx|xxx
-		xx|xx|xx|xxx
+	   M--G--I--K---P
+	   |xx|xx|xx|xxx|
+	   |xx|xx|xx|xxx|
 	   A--+--+--+---B
-		xx|xx|xx|xxx
-		xx|xx|pp|xxx
-		xx|xx|pp|xxx
+	   |xx|xx|xx|xxx|
+	   |xx|xx|pp|xxx|
+	   |xx|xx|pp|xxx|
 	   C--+--+--+---D
-		xx|xx|xx|xxx
-		xx|xx|xx|xxx
+	   |xx|xx|xx|xxx|
+	   |xx|xx|xx|xxx|
 	   E--+--+--+---F
-		xx|pp|xx|ttt
-		xx|pp|xx|ttt
-		  H  J  L
-	*/	
+	   |xx|pp|xx|ttt|
+	   |xx|pp|xx|ttt|
+	   N--H--J--L---O
+	*/
+
+		// Horizontal lines
 	var a = { x: 37,   y: 861,  lat: 62.389415, lon: 17.301815 },
 		b = { x: 1053, y: 861,  lat: 62.391632, lon: 17.302909 },
 		c = { x: 37,   y: 1279, lat: 62.389211, lon: 17.303724 },
 		d = { x: 1053, y: 1279, lat: 62.391394, lon: 17.304851 },
 		e = { x: 37,   y: 1605, lat: 62.389052, lon: 17.305226 },
 		f = { x: 1053, y: 1605, lat: 62.39123,  lon: 17.306374 },
-
+		// Vertical lines
 		g = { x: 269,  y: 593,  lat: 62.390056, lon: 17.30087 },
 		h = { x: 269,  y: 1891, lat: 62.38945,  lon: 17.306793 },
 		i = { x: 514,  y: 593,  lat: 62.390573, lon: 17.301106 },
 		j = { x: 514,  y: 1891, lat: 62.389917, lon: 17.307104 },
 		k = { x: 731,  y: 593,  lat: 62.391085, lon: 17.301332 },
-		l = { x: 731,  y: 1891, lat: 62.390374, lon: 17.307372 };
+		l = { x: 731,  y: 1891, lat: 62.390374, lon: 17.307372 },
+		// Bounding box
+		m = { x: 37,   y: 593,  lat: 62.389549, lon: 17.300591 },
+		n = { x: 37,   y: 1891, lat: 62.388898, lon: 17.306525 },
+		o = { x: 1053, y: 1891, lat: 62.391066, lon: 17.307737 },
+		p = { x: 1053, y: 593,  lat: 62.391752, lon: 17.301772 };
 
 	const POINTS = 100;
 
 	// Interpolate everyting between these points
-	var snapPoints = [[a, b], [c, d], [e, f], [g, h], [i, j], [k, l]],
+	var snapPoints = [[a, b], [c, d], [e, f], [g, h], [i, j], [k, l], [m, n], [n, o], [p, o], [m, p]],
 		snapGridResult = [];
 
 	for (var p = 0; p < snapPoints.length; p++) {
@@ -88,23 +95,35 @@ function calculateSnapGrid() {
 }
 
 $(function() {
+	$("#startGame").click(function() {
+		$("#register").hide();
+		noSleep.enable();
+		startGame();
+	});
+});
+
+function startGame() {
 	// Sprites
 	var board,
 		pacman,
 		gameover,
+		winner,
 		pacdots = [],
-		ghosts = [],
-		pacmanSpeed = 2;
+		pacdotsLeft,
+		ghosts = [];
 
 	// Sounds
 	var eating,
 		die,
 		siren;
 
+	console.log($("#username").val());
+
 	// Game state
 	var score = 0,
 		scoreText = new PIXI.Text("0", { fontFamily: "Courier", fontSize: 80, fill: "white", fontWeight: "bold" }),
 		timeText = new PIXI.Text("00:00", { fontFamily: "Courier", fontSize: 80, fill: "white", fontWeight: "bold" }),
+		nameText = new PIXI.Text($("#username").val(), { fontFamily: "Courier", fontSize: 80, fill: "white", fontWeight: "bold" }),
 		startTime,
 		timeElapsed;
 
@@ -128,55 +147,6 @@ $(function() {
 		alert("Sorry! Cannot access the GPS on your device");
 	}
 
-	/*let keyRight = keyboard(39),
-		keyLeft = keyboard(37),
-		keyUp = keyboard(38),
-		keyDown = keyboard(40);
-
-	keyRight.press = () => {
-		pacman.vx = pacmanSpeed;
-		pacman.vy = 0;
-	};
-
-	keyRight.release = () => {
-		if (!keyLeft.isDown && pacman.vy === 0) {
-			pacman.vx = 0;
-		}
-	}
-
-	keyLeft.press = () => {
-		pacman.vx = -pacmanSpeed;
-		pacman.vy = 0;
-	};
-
-	keyLeft.release = () => {
-		if (!keyRight.isDown && pacman.vy === 0) {
-			pacman.vx = 0;
-		}
-	}
-
-	keyUp.press = () => {
-		pacman.vx = 0;
-		pacman.vy = -pacmanSpeed;
-	};
-
-	keyUp.release = () => {
-		if (!keyDown.isDown && pacman.vx === 0) {
-			pacman.vy = 0;
-		}
-	}
-
-	keyDown.press = () => {
-		pacman.vx = 0;
-		pacman.vy = pacmanSpeed;
-	};
-
-	keyDown.release = () => {
-		if (!keyUp.isDown && pacman.vx === 0) {
-			pacman.vy = 0;
-		}
-	}*/
-
 	let app = new Application({width: gameWidth, height: gameHeight});
 	app.renderer.autoResize = true;
 	document.body.appendChild(app.view);
@@ -185,15 +155,7 @@ $(function() {
 	function resize() {
 		scaleScene(app.renderer, app.stage);
 	}
-
 	resize();
-	/*setInterval(function() {
-		resize();
-	}, 2000);*/
-
-	/*setTimeout(function() {
-		newPosition({ coords: { latitude: 62.390703, longitude: 17.304507, heading: 270 } });
-	}, 3000);*/
 
 	function loadAssets() {
 		let directory = "assets";
@@ -208,7 +170,9 @@ $(function() {
 			"pacman.png",
 			"realmap.png",
 			"ready.png",
-			"yellowghost.png"
+			"yellowghost.png",
+			"geocache.png",
+			"winner.png"
 		];
 
 		sounds.load([
@@ -275,12 +239,15 @@ $(function() {
 		];
 
 		board = new Sprite(resources["assets/board.png"].texture);
+
 		app.stage.addChild(board);
 		app.stage.addChild(scoreText);
 		app.stage.addChild(timeText);
+		app.stage.addChild(nameText);
 
 		scoreText.position.set(650, 390);
 		timeText.position.set(184, 390);
+		nameText.position.set((gameWidth - nameText.width) / 2, 480);
 
 		drawPacDotsLineX(60, 1060, 1600, 25, [5, 11, 17]);
 		drawPacDotsLineX(60, 1060, 1273, 25, [5, 17]);
@@ -291,11 +258,16 @@ $(function() {
 		drawPacDotsLineY(591, 1920, 728, 35, [7]);
 
 		pacman = new Sprite(resources["assets/pacman.png"].texture);
-		pacman.position.set(894, 1432);
+		pacman.position.set(-30, -30);
 		pacman.vx = 0;
 		pacman.vy = 0;
 		pacman.anchor.set(0.5, 0.5);
 		app.stage.addChild(pacman);
+
+		geocache = new Sprite(resources["assets/geocache.png"].texture);
+		geocache.position.set(850, 1645);
+		geocache.visible = false;
+		app.stage.addChild(geocache);
 
 		ghostData.forEach(function(g) {
 			var ghost = new Sprite(resources["assets/" + g.name + "ghost.png"].texture);
@@ -305,29 +277,41 @@ $(function() {
 			ghosts.push(ghost);
 		});
 
+		pacdotsLeft = pacdots.length;
+
 		gameover = new Sprite(resources["assets/gameover.png"].texture);
 		gameover.position.set(350, 900);
 		gameover.visible = false;
 		app.stage.addChild(gameover);
 
+		winner = new Sprite(resources["assets/winner.png"].texture);
+		winner.position.set((gameWidth - winner.width) / 2, 800);
+		winner.visible = false;
+		app.stage.addChild(winner);
 		app.ticker.add(delta => gameLoop(delta));
 
+		// Ugly hack to get the canvas to scale on my Android.
 		setInterval(function() { resize(); }, 2000);
 
 		startTime = new Date();
 	}
 
 	function gameLoop(delta) {
-		//pacman.x += pacman.vx;
-		//pacman.y += pacman.vy;
 		pacdots.forEach(function(dot) {
 			if (dot.visible && hitTestRectangle(dot, pacman)) {
 				dot.visible = false;
+				pacdotsLeft--;
 				score += 100;
 				scoreText.text = score;
 				eating.play();
 			}
 		});
+
+		if (pacdotsLeft === 0) {
+			app.ticker.stop();
+			geocache.visible = true;
+			winner.visible = true;
+		}
 
 		// Update ghost position and bounds checking
 		ghosts.forEach(function(ghost) {
@@ -343,8 +327,9 @@ $(function() {
 			if (die.playing === false && hitTestRectangle(ghost, pacman)) {
 				die.play();
 				ghost.visible = false;
-				//gameover.visible = true;
-				//pacman.visible = false;
+				gameover.visible = true;
+				pacman.visible = false;
+				app.ticker.stop();
 			}
 		});
 
@@ -352,44 +337,6 @@ $(function() {
 		timeText.text = ('0' + Math.floor(timeElapsed / 60)).slice(-2) + ":"
 					  + ('0' + (timeElapsed % 60)).slice(-2);
 	}
-
-	/*function keyboard(keyCode) {
-		let key = {};
-		key.code = keyCode;
-		key.isDown = false;
-		key.isUp = true;
-		key.press = undefined;
-		key.release = undefined;
-
-		key.downHandler = event => {
-			if (event.keyCode === key.code) {
-				if (key.isUp && key.press) key.press();
-				key.isDown = true;
-				key.isUp = false;
-			}
-			event.preventDefault();
-		};
-
-		key.upHandler = event => {
-			if (event.keyCode === key.code) {
-				if (key.isDown && key.release) key.release();
-				key.isDown = false;
-				key.isUp = true;
-			}
-			event.preventDefault();
-		};
-
-		//Attach event listeners
-		window.addEventListener(
-			"keydown", key.downHandler.bind(key), false
-		);
-
-		window.addEventListener(
-			"keyup", key.upHandler.bind(key), false
-		);
-
-		return key;
-	}*/
 
 	function hitTestRectangle(r1, r2) {
 		// Define the variables we'll need to calculate
@@ -454,8 +401,6 @@ $(function() {
 		var closestDistance = 10000,
 			closestPoint;
 
-		console.log(position.coords);
-
 		for (var i = 0; i < snapGrid.length; i++) {
 			var gp = snapGrid[i];
 			var distance = calculateDistance(gp.lat, gp.lon, position.coords.latitude, position.coords.longitude);
@@ -470,9 +415,8 @@ $(function() {
 	}
 
 	function errorPosition(error) {
-		alert("Error getting GPS position");
+		alert("Error getting GPS position! You must open the link from your mobile browser, the GC-application won't work!");
 	}
 
 	loadAssets();
-
-});
+}
