@@ -422,7 +422,7 @@ function startGame() {
 		}
 
 		pacman.position.set(closestPoint.x, closestPoint.y);
-		pacman.rotation = (position.coords.heading / 360.0);
+		pacman.rotation = (position.coords.heading).toRad();
 	}
 
 	function errorPosition(error) {
