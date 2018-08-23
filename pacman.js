@@ -230,7 +230,7 @@ function startGame() {
 	}
 
 	function setup() {
-		let ghostSpeed = 1;
+		let ghostSpeed = 0.5;
 		var ghostData = [
 			{ name: "blue", x: 234, y: 580, vy: ghostSpeed, vx: 0 },
 			{ name: "pink", x: 700, y: 880, vy: ghostSpeed, vx: 0 },
@@ -426,7 +426,7 @@ function startGame() {
 	}
 
 	function errorPosition(error) {
-		alert("Error getting GPS position! You must open the link from your mobile browser, the GC-application won't work!");
+		alert("Error getting GPS position! You must open the link from your mobile browser, the GC-application won't work!\nError: " + error.message);
 	}
 
 	loadAssets();
