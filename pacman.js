@@ -105,6 +105,8 @@ $(function() {
 function startGame() {
 	// Sprites
 	var board,
+		realMap,
+		mapMarker,
 		pacman,
 		gameover,
 		winner,
@@ -166,6 +168,7 @@ function startGame() {
 			"pinkghost.png",
 			"redghost.png",
 			"board.png",
+			"mapmarker.png",
 			"gameover.png",
 			"pacman.png",
 			"realmap.png",
@@ -230,7 +233,7 @@ function startGame() {
 	}
 
 	function setup() {
-		let ghostSpeed = 0.5;
+		let ghostSpeed = 0.25;
 		var ghostData = [
 			{ name: "blue", x: 234, y: 580, vy: ghostSpeed, vx: 0 },
 			{ name: "pink", x: 700, y: 880, vy: ghostSpeed, vx: 0 },
@@ -239,8 +242,27 @@ function startGame() {
 		];
 
 		board = new Sprite(resources["assets/board.png"].texture);
+		realMap = new Sprite(resources["assets/realmap.png"].texture);
+		realMap.position.set(0, gameHeight - realMap.height);
+		realMap.alpha = 0.0;
+		mapMarker = new Sprite(resources["assets/mapmarker.png"].texture);
+		mapMarker.position.set((gameWidth - mapMarker.width) / 2 - 20, 300);
+		mapMarker.interactive = true;
+		mapMarker.buttonMode = true;
+		mapMarker.on("pointerdown", function() {
+			if (realMap.alpha > 0) {
+				console.log("Setting alpha 0");
+				realMap.alpha = 0.0;
+			}
+			else {
+				console.log("Setting alpha 0.6");
+				realMap.alpha = 1.0;
+			}
+		});
 
 		app.stage.addChild(board);
+		app.stage.addChild(realMap);
+		app.stage.addChild(mapMarker);
 		app.stage.addChild(scoreText);
 		app.stage.addChild(timeText);
 		app.stage.addChild(nameText);
@@ -422,7 +444,9 @@ function startGame() {
 		}
 
 		pacman.position.set(closestPoint.x, closestPoint.y);
-		pacman.rotation = (position.coords.heading).toRad();
+		if (position.coords.heading !== null) {
+			pacman.rotation = (position.coords.heading).toRad();
+		}
 	}
 
 	function errorPosition(error) {
