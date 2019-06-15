@@ -146,7 +146,7 @@ function startGame() {
 			}
 		);
 	} else {
-		alert("Sorry! Cannot access the GPS on your device");
+		alert("Vi kan tyvärr inte få någon signal från din GPS!");
 	}
 
 	let app = new Application({width: gameWidth, height: gameHeight});
@@ -233,10 +233,12 @@ function startGame() {
 	}
 
 	function setup() {
-		let ghostSpeed = 0.25;
+		let ghostSpeed = 0.10;
 		var ghostData = [
+			// Vertial ghosts
 			{ name: "blue", x: 234, y: 580, vy: ghostSpeed, vx: 0 },
 			{ name: "pink", x: 700, y: 880, vy: ghostSpeed, vx: 0 },
+			// Horizontal ghosts
 			{ name: "yellow", x: 480, y: 1240, vy: 0, vx: -ghostSpeed },
 			{ name: "red", x: 20, y: 1564, vy: 0, vx: ghostSpeed }
 		];
@@ -251,11 +253,22 @@ function startGame() {
 		mapMarker.buttonMode = true;
 		mapMarker.on("pointerdown", function() {
 			if (realMap.alpha > 0) {
-				console.log("Setting alpha 0");
+				pacdots.forEach(function(dot) {
+					if (dot.visible) {
+						// Tint back to default.
+						dot.tint = 0xffffffff;
+					}
+				});
 				realMap.alpha = 0.0;
 			}
 			else {
-				console.log("Setting alpha 0.6");
+				// Make the pacdots more visible in map mode.
+				pacdots.forEach(function(dot) {
+					if (dot.visible) {
+						// Tint them blue.
+						dot.tint = 0x000000ff;
+					}
+				});
 				realMap.alpha = 1.0;
 			}
 		});
@@ -450,7 +463,7 @@ function startGame() {
 	}
 
 	function errorPosition(error) {
-		alert("Error getting GPS position! You must open the link from your mobile browser, the GC-application won't work!\nError: " + error.message);
+		alert("Kan ej hitta din position! OBS! Du måste öppna länken via din mobila webbläsare, det funkar ej via Messenger eller någon Geocaching app!\nFel: " + error.message);
 	}
 
 	loadAssets();
