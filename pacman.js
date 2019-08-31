@@ -34,20 +34,20 @@ function calculateSnapGrid() {
 
 		Miniature map
 
-	   M--G--I--K---P
-	   |xx|xx|xx|xxx|
-	   |xx|xx|xx|xxx|
-	   A--+--+--+---B
-	   |xx|xx|xx|xxx|
-	   |xx|xx|pp|xxx|
-	   |xx|xx|pp|xxx|
-	   C--+--+--+---D
-	   |xx|xx|xx|xxx|
-	   |xx|xx|xx|xxx|
-	   E--+--+--+---F
-	   |xx|pp|xx|ttt|
-	   |xx|pp|xx|ttt|
-	   N--H--J--L---O
+		M--G--I--K---P
+		|xx|xx|xx|xxx|
+		|xx|xx|xx|xxx|
+		A--+--+--+---B
+		|xx|xx|xx|xxx|
+		|xx|xx|pp|xxx|
+		|xx|xx|pp|xxx|
+		C--+--+--+---D
+		|xx|xx|xx|xxx|
+		|xx|xx|xx|xxx|
+		E--+--+--+---F
+		|xx|pp|xx|ttt|
+		|xx|pp|xx|ttt|
+		N--H--J--L---O
 	*/
 
 		// Horizontal lines
@@ -68,12 +68,17 @@ function calculateSnapGrid() {
 		m = { x: 37,   y: 593,  lat: 62.389549, lon: 17.300591 },
 		n = { x: 37,   y: 1891, lat: 62.388898, lon: 17.306525 },
 		o = { x: 1053, y: 1891, lat: 62.391066, lon: 17.307737 },
-		p = { x: 1053, y: 593,  lat: 62.391752, lon: 17.301772 };
+		p = { x: 1053, y: 593,  lat: 62.391752, lon: 17.301772 },
+		// The parks (marked as p's which is used as safe zones)
+		q = { x: 495,  y: 1611, lat: 62.390026, lon: 17.305763 },
+		r = { x: 282,  y: 1887, lat: 62.389484, lon: 17.306771 }, 
+		s = { x: 525,  y: 1008, lat: 62.390399, lon: 17.303059 }, 
+		t = { x: 729,  y: 1260, lat: 62.390683, lon: 17.304443 }; 
 
 	const POINTS = 100;
 
 	// Interpolate everyting between these points
-	var snapPoints = [[a, b], [c, d], [e, f], [g, h], [i, j], [k, l], [m, n], [n, o], [p, o], [m, p]],
+	var snapPoints = [[a, b], [c, d], [e, f], [g, h], [i, j], [k, l], [m, n], [n, o], [p, o], [m, p], [q, r], [s, t]],
 		snapGridResult = [];
 
 	for (var p = 0; p < snapPoints.length; p++) {
@@ -112,14 +117,15 @@ function startGame() {
 		winner,
 		pacdots = [],
 		pacdotsLeft,
+		bigDotsEaten = 0,
 		ghosts = [];
 
 	// Sounds
 	var eating,
 		die,
-		siren;
-
-	console.log($("#username").val());
+		siren,
+		music,
+		musicInstance;
 
 	// Game state
 	var score = 0,
@@ -136,15 +142,17 @@ function startGame() {
 		snapGrid = calculateSnapGrid();
 
 	if (navigator.geolocation) {
-		navigator.geolocation.watchPosition(
-			newPosition,
-			errorPosition,
-			{
-				enableHighAccuracy: true,
-				timeout: 10000,
-				maximumAge: 0
-			}
-		);
+		setTimeout(function() {
+			navigator.geolocation.watchPosition(
+				newPosition,
+				errorPosition,
+				{
+					enableHighAccuracy: true,
+					timeout: 10000,
+					maximumAge: 0
+				}
+			);
+		}, 1000);
 	} else {
 		alert("Vi kan tyvärr inte få någon signal från din GPS!");
 	}
@@ -184,13 +192,18 @@ function startGame() {
 			"assets/eating.mp3",
 			"assets/ready.mp3",
 			"assets/siren.mp3",
-			"assets/die.mp3"
+			"assets/die.mp3",
+			"assets/music.mp3"
 		]);
-		sounds.whenLoaded = function() {};
 
 		eating = sounds["assets/eating.mp3"];
 		siren = sounds["assets/siren.mp3"];
 		die = sounds["assets/die.mp3"];
+		music = sounds["assets/music.mp3"];
+
+		sounds.whenLoaded = function() {
+			musicInstance = music.play();
+		};
 
 		loader.add(assets.map(a => directory + "/" + a))
 			  .on("progress", loadProgress)
@@ -233,7 +246,8 @@ function startGame() {
 	}
 
 	function setup() {
-		let ghostSpeed = 0.10;
+		let ghostSpeed = 0.25;
+		var bigPacDots = [0, 40, 120, 48, 65];
 		var ghostData = [
 			// Vertial ghosts
 			{ name: "blue", x: 234, y: 580, vy: ghostSpeed, vx: 0 },
@@ -292,6 +306,13 @@ function startGame() {
 		drawPacDotsLineY(591, 1920, 510, 35, [18]);
 		drawPacDotsLineY(591, 1920, 728, 35, [7]);
 
+		bigPacDots.forEach(function(i) {
+			pacdots[i].scale.x = 2.5;
+			pacdots[i].scale.y = 2.5;
+			pacdots[i].x -= 8;
+			pacdots[i].y -= 8;
+		});
+
 		pacman = new Sprite(resources["assets/pacman.png"].texture);
 		pacman.position.set(-30, -30);
 		pacman.vx = 0;
@@ -327,13 +348,16 @@ function startGame() {
 
 		// Ugly hack to get the canvas to scale on my Android.
 		setInterval(function() { resize(); }, 2000);
-
 		startTime = new Date();
 	}
 
 	function gameLoop(delta) {
 		pacdots.forEach(function(dot) {
 			if (dot.visible && hitTestRectangle(dot, pacman)) {
+				if (dot.scale.x > 1) {
+					bigDotsEaten++;
+					scaoe += 900;
+				}
 				dot.visible = false;
 				pacdotsLeft--;
 				score += 100;
@@ -342,7 +366,8 @@ function startGame() {
 			}
 		});
 
-		if (pacdotsLeft === 0) {
+		// Win conditions
+		if (pacdotsLeft === 0 || bigDotsEaten === 5) {
 			app.ticker.stop();
 			geocache.visible = true;
 			winner.visible = true;
@@ -382,6 +407,8 @@ function startGame() {
 		timeElapsed = (Date.parse(new Date()) - Date.parse(startTime)) / 1000;
 		timeText.text = ('0' + Math.floor(timeElapsed / 60)).slice(-2) + ":"
 					  + ('0' + (timeElapsed % 60)).slice(-2);
+		console.log(timeElapsed);
+		console.log(timeText.text);
 	}
 
 	function hitTestRectangle(r1, r2) {
