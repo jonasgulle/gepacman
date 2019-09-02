@@ -1,6 +1,6 @@
 <?php
 
-if (!isset($_POST["username"], $_POST["timespent"], $_POST["score"])) {
+if (!isset($_POST["username"], $_POST["timespent"], $_POST["score"], $_POST["lives"])) {
 	echo "Bad request\n";
 	die();
 }
@@ -10,16 +10,18 @@ $db->query('CREATE TABLE IF NOT EXISTS "highscore" (
 		"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 		"username" VARCHAR,
 		"score" INTEGER,
+		"lives" INTEGER,
 		"timespent" INTEGER,
 		"created" DATETIME
 	)'
 );
 
-$statement = $db->prepare('INSERT INTO "highscore" ("username", "score", "timespent", "created")
-	VALUES (:username, :score, :timespent, :created)');
+$statement = $db->prepare('INSERT INTO "highscore" ("username", "score", "lives", "timespent", "created")
+	VALUES (:username, :score, :lives, :timespent, :created)');
 
 $statement->bindValue(':username', $_POST["username"]);
 $statement->bindValue(':score', $_POST["score"]);
+$statement->bindValue(':lives', $_POST["lives"]);
 $statement->bindValue(':timespent', $_POST["timespent"]);
 $statement->bindValue(':created', date('Y-m-d G:i:s'));
 

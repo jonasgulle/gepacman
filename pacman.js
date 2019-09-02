@@ -407,12 +407,19 @@ function startGame() {
 			geocache.visible = true;
 			winner.visible = true;
 
+			let searchParams = new URLSearchParams(window.location.search);
+			var lives = 1;
+			if (searchParams.has("lives")) {
+				lives = parseInt(searchParams.get("lives"), 10);
+			}
+
 			$.post(
 				"saveresult.php",
 				{
 					username: $("#username").val(),
 					timespent: timeElapsed,
-					score: score
+					score: score,
+					lives: lives
 				}, function(response) {
 					console.log(response);
 				}

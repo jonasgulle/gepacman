@@ -22,10 +22,11 @@ if ($results && count($results) > 0) {
 	$row_num = 0;
 	while ($row = $results->fetchArray()) {
 		$row_content = sprintf(
-			"%d. %s %dp (%dmin) %s",
+			"%d. %s %dp (%d min, %d liv) %s",
 			$row_num + 1,
 			$row["username"],
 			$row["score"],
+			$row["lives"],
 			$row["timespent"] / 60,
 			$row["created"]
 		);
