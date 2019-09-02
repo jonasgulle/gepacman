@@ -410,7 +410,7 @@ function startGame() {
 			let searchParams = new URLSearchParams(window.location.search);
 			var lives = 1;
 			if (searchParams.has("lives")) {
-				lives = parseInt(searchParams.get("lives"), 10);
+				lives = parseInt(searchParams.get("lives"), 10) + 1;
 			}
 
 			$.post(
