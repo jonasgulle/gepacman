@@ -26,8 +26,8 @@ if ($results && count($results) > 0) {
 			$row_num + 1,
 			$row["username"],
 			$row["score"],
-			$row["lives"],
 			$row["timespent"] / 60,
+			$row["lives"],
 			$row["created"]
 		);
 		$image->annotateImage($draw, 10, 60 + $row_num * $row_height, 0, $row_content);
