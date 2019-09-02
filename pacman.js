@@ -3,6 +3,19 @@ const gameHeight = 1920;
 var gameStarted = false,
 	noSleep = new NoSleep();
 
+$(function() {
+	let searchParams = new URLSearchParams(window.location.search)
+	if (searchParams.has("gcname")) {
+		$("#username").val(searchParams.get("gcname"));
+		$("#startGame").text("Restart ("+ searchParams.get("lives") +")!");
+	}
+	$("#startGame").click(function() {
+		$("#register").hide();
+		noSleep.enable();
+		startGame();
+	});
+});
+
 // The game board is 250x350 meters IRL.
 
 // Distance in meters
@@ -98,14 +111,6 @@ function calculateSnapGrid() {
 
 	return snapGridResult;
 }
-
-$(function() {
-	$("#startGame").click(function() {
-		$("#register").hide();
-		noSleep.enable();
-		startGame();
-	});
-});
 
 function startGame() {
 	// Sprites
@@ -356,6 +361,18 @@ function startGame() {
 		gameover = new Sprite(resources["assets/gameover.png"].texture);
 		gameover.position.set(350, 900);
 		gameover.visible = false;
+
+		gameover.interactive = true;
+		gameover.buttonMode = true;
+		gameover.on("pointerdown", function() {
+			let searchParams = new URLSearchParams(window.location.search);
+			var lives = 1;
+			if (searchParams.has("lives")) {
+				lives = parseInt(searchParams.get("lives"), 10) + 1;
+			}
+			location.href = "index.html?gcname=" + encodeURIComponent($("#username").val()) + "&lives=" + encodeURIComponent(lives);
+		});
+
 		app.stage.addChild(gameover);
 
 		winner = new Sprite(resources["assets/winner.png"].texture);
@@ -415,10 +432,12 @@ function startGame() {
 		ghosts.forEach(function(ghost) {
 			if (die.playing === false && hitTestRectangle(ghost, pacman)) {
 				die.play();
+				music.restart();
+				music.pause();
 				ghost.visible = false;
 				gameover.visible = true;
 				pacman.visible = false;
-				app.ticker.stop();
+				//app.ticker.stop();
 			}
 		});
 
