@@ -326,7 +326,7 @@ function startGame() {
 		pacman.anchor.set(0.5, 0.5);
 		app.stage.addChild(pacman);
 
-		document.addEventListener('keydown', function(key) {
+		/*document.addEventListener('keydown', function(key) {
 			const pacmanSpeed = 10;
 			if (key.keyCode === 40) {
 				// Arrow down
@@ -341,7 +341,7 @@ function startGame() {
 				// Arrow left
 				pacman.x -= pacmanSpeed;
 			}
-		});
+		});*/
 
 		geocache = new Sprite(resources["assets/geocache.png"].texture);
 		geocache.position.set(850, 1645);
