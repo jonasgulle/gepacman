@@ -45,8 +45,8 @@ function calculateSnapGrid() {
 		|xx|xx|xx|xxx|
 		|xx|xx|xx|xxx|
 		E--+--+--+---F
-		|xx|pp|xx|ttt|
-		|xx|pp|xx|ttt|
+		|xx|pp|xx|ppp|
+		|xx|pp|xx|ppp|
 		N--H--J--L---O
 	*/
 
@@ -69,13 +69,13 @@ function calculateSnapGrid() {
 		n = { x: 37,   y: 1891, lat: 62.388898, lon: 17.306525 },
 		o = { x: 1053, y: 1891, lat: 62.391066, lon: 17.307737 },
 		p = { x: 1053, y: 593,  lat: 62.391752, lon: 17.301772 },
-		// The parks (marked as p's which is used as safe zones)
+		// The parks/squares (marked as p's which is used as safe zones)
 		q = { x: 495,  y: 1611, lat: 62.390026, lon: 17.305763 },
 		r = { x: 282,  y: 1887, lat: 62.389484, lon: 17.306771 }, 
 		s = { x: 525,  y: 1008, lat: 62.390399, lon: 17.303059 }, 
 		t = { x: 729,  y: 1260, lat: 62.390683, lon: 17.304443 }; 
 
-	const POINTS = 100;
+	const POINTS = 80;
 
 	// Interpolate everyting between these points
 	var snapPoints = [[a, b], [c, d], [e, f], [g, h], [i, j], [k, l], [m, n], [n, o], [p, o], [m, p], [q, r], [s, t]],
@@ -202,7 +202,8 @@ function startGame() {
 		music = sounds["assets/music.mp3"];
 
 		sounds.whenLoaded = function() {
-			musicInstance = music.play();
+			music.loop = true;
+			music.play();
 		};
 
 		loader.add(assets.map(a => directory + "/" + a))
@@ -320,6 +321,23 @@ function startGame() {
 		pacman.anchor.set(0.5, 0.5);
 		app.stage.addChild(pacman);
 
+		document.addEventListener('keydown', function(key) {
+			const pacmanSpeed = 10;
+			if (key.keyCode === 40) {
+				// Arrow down
+				pacman.y += pacmanSpeed;
+			} else if (key.keyCode === 38) {
+				// Arrow up
+				pacman.y -= pacmanSpeed;
+			} else if (key.keyCode === 39) {
+				// Arrow right
+				pacman.x += pacmanSpeed;
+			} else if (key.keyCode === 37) {
+				// Arrow left
+				pacman.x -= pacmanSpeed;
+			}
+		});
+
 		geocache = new Sprite(resources["assets/geocache.png"].texture);
 		geocache.position.set(850, 1645);
 		geocache.visible = false;
@@ -356,7 +374,7 @@ function startGame() {
 			if (dot.visible && hitTestRectangle(dot, pacman)) {
 				if (dot.scale.x > 1) {
 					bigDotsEaten++;
-					scaoe += 900;
+					score += 900;
 				}
 				dot.visible = false;
 				pacdotsLeft--;
@@ -407,8 +425,6 @@ function startGame() {
 		timeElapsed = (Date.parse(new Date()) - Date.parse(startTime)) / 1000;
 		timeText.text = ('0' + Math.floor(timeElapsed / 60)).slice(-2) + ":"
 					  + ('0' + (timeElapsed % 60)).slice(-2);
-		console.log(timeElapsed);
-		console.log(timeText.text);
 	}
 
 	function hitTestRectangle(r1, r2) {
