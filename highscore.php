@@ -16,17 +16,17 @@ $image->annotateImage($draw, 0, 30, 0, 'Pac-Man Highscore '.$now);
 $row_height = 23;
 
 $db = new SQLite3('db/highscore.db', SQLITE3_OPEN_CREATE | SQLITE3_OPEN_READWRITE);
-$results = $db->query('SELECT * FROM "highscore" ORDER BY "timespent" DESC LIMIT 20');
+$results = $db->query('SELECT * FROM "highscore" ORDER BY "score" DESC LIMIT 20');
 
 if ($results && count($results) > 0) {
 	$row_num = 0;
 	while ($row = $results->fetchArray()) {
 		$row_content = sprintf(
-			"%d. %s %dp (%d min, %d liv) %s",
+			"%d. %s %dp (tid %d, %d liv) %s",
 			$row_num + 1,
 			$row["username"],
 			$row["score"],
-			$row["timespent"] / 60,
+			$row["timespent"],
 			$row["lives"],
 			$row["created"]
 		);
